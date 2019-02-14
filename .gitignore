@@ -1,0 +1,6 @@
+public/*.js
+public/*.map
+public/*.html
+.DS_Store
+node_modules
+.local/db/*
