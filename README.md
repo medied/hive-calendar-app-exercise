@@ -39,10 +39,6 @@ The current state of the app is not great! We've found a few pretty bad bugs. Th
 
 We've done QA as a team and found several bugs. Apologies for lack of description on some of them, we're a bit stretched for time. See the bugs below.
 
-## Event deletion isn't working
-
-I think it's a UI issue, maybe a back-end one, but really not sure.
-
 ## Updating an event, then opening modal causes event to reset in background
 
 Steps to reproduce:

@@ -94,7 +94,7 @@ router
         mongo: { Events },
         params: { eventId },
       } = req;
-      await Events.findOneAndDelete({ _id: eventId });
+      await Events.findOneAndDelete({ _id: new ObjectID(eventId) });
       res.json({});
     } catch (e) {
       next(e);
