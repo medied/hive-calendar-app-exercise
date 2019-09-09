@@ -31,8 +31,8 @@ router
         start: new Date(start),
         end: new Date(end),
       };
-      res.json(newEventDoc);
       await Events.insertOne(newEventDoc);
+      res.json(newEventDoc);
     } catch (e) {
       next(e);
     }
