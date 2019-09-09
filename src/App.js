@@ -86,8 +86,12 @@ class App extends React.Component {
 
   onCloseModal() {
     // Update the event
-    const { openedEventId, openedEventTitle, newEvent } = this.state;
+    const { openedEventId, newEvent } = this.state;
+    let { openedEventTitle } = this.state;
     if (newEvent) {
+      if (openedEventTitle === '') {
+        openedEventTitle = '(No title)';
+      }
       axios
         .post('/api/events', { ...newEvent, title: openedEventTitle })
         .then(({ data }) => {
