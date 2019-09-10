@@ -20,9 +20,13 @@ class App extends React.Component {
       newEvent: false,
       openedEventTitle: '',
       openedEventId: '',
+      isRecurring: false,
+      recurringEventInfo: {},
     };
 
     this.fetchAndLoadEvents = this.fetchAndLoadEvents.bind(this);
+    this.getDates = this.getDates.bind(this);
+    this.handleRecurringEvents = this.handleRecurringEvents.bind(this);
     this.onEventDrop = this.onEventDrop.bind(this);
     this.onEventResize = this.onEventResize.bind(this);
     this.onEventClick = this.onEventClick.bind(this);
@@ -30,6 +34,11 @@ class App extends React.Component {
     this.onCloseModal = this.onCloseModal.bind(this);
     this.onExitedModal = this.onExitedModal.bind(this);
     this.onTitleChange = this.onTitleChange.bind(this);
+    this.onRecurCheckboxChange = this.onRecurCheckboxChange.bind(this);
+    this.onRecurIntervalChange = this.onRecurIntervalChange.bind(this);
+    this.onRecurDaysChange = this.onRecurDaysChange.bind(this);
+    this.onRecurStartChange = this.onRecurStartChange.bind(this);
+    this.onRecurEndChange = this.onRecurEndChange.bind(this);
     this.onDelete = this.onDelete.bind(this);
   }
 
@@ -86,12 +95,19 @@ class App extends React.Component {
 
   onCloseModal() {
     // Update the event
-    const { openedEventId, newEvent } = this.state;
+    const {
+      openedEventId,
+      newEvent,
+      isRecurring,
+      recurringEventInfo,
+    } = this.state;
+
     let { openedEventTitle } = this.state;
-    if (newEvent) {
-      if (openedEventTitle === '') {
-        openedEventTitle = '(No title)';
-      }
+    if (openedEventTitle === '') openedEventTitle = '(No title)';
+
+    if (isRecurring) {
+      this.handleRecurringEvents(recurringEventInfo, openedEventTitle);
+    } else if (newEvent && !isRecurring) {
       axios
         .post('/api/events', { ...newEvent, title: openedEventTitle })
         .then(({ data }) => {
@@ -141,6 +157,68 @@ class App extends React.Component {
     this.setState({ openedEventTitle: event.currentTarget.value });
   }
 
+  onRecurCheckboxChange(event) {
+    this.setState({ isRecurring: event.currentTarget.checked });
+  }
+
+  onRecurIntervalChange(event) {
+    const { recurringEventInfo } = this.state;
+    const recurInterval = event.currentTarget.value;
+
+    this.setState({
+      recurringEventInfo: { ...recurringEventInfo, interval: recurInterval },
+    });
+  }
+
+  onRecurDaysChange(event) {
+    const { recurringEventInfo } = this.state;
+    const days = {
+      sun: 0,
+      mon: 1,
+      tue: 2,
+      wed: 3,
+      thu: 4,
+      fri: 5,
+      sat: 6,
+    };
+    const daySelected = event.currentTarget;
+    let _daysOfWeek;
+
+    recurringEventInfo.daysOfWeek
+      ? (_daysOfWeek = recurringEventInfo.daysOfWeek)
+      : (_daysOfWeek = []);
+
+    if (daySelected.checked) {
+      _daysOfWeek.push(days[daySelected.name]);
+    } else {
+      _daysOfWeek = _daysOfWeek.filter(day => day !== days[daySelected.name]);
+    }
+
+    _daysOfWeek.sort();
+
+    this.setState({
+      recurringEventInfo: { ...recurringEventInfo, daysOfWeek: _daysOfWeek },
+    });
+  }
+
+  onRecurStartChange(event) {
+    const { recurringEventInfo } = this.state;
+    const startDate = event.currentTarget.value;
+
+    this.setState({
+      recurringEventInfo: { ...recurringEventInfo, startDate: startDate },
+    });
+  }
+
+  onRecurEndChange(event) {
+    const { recurringEventInfo } = this.state;
+    const endDate = event.currentTarget.value;
+
+    this.setState({
+      recurringEventInfo: { ...recurringEventInfo, endDate: endDate },
+    });
+  }
+
   onDelete() {
     const { openedEventId } = this.state;
     axios.delete(`/api/events/${openedEventId}`).then(() => {
@@ -184,11 +262,75 @@ class App extends React.Component {
       });
   }
 
+  getDates(interval, daysOfWeek, startDate, endDate) {
+    let dates = [];
+    let currentDate = moment(startDate);
+    let daysCounter = 0;
+
+    while (currentDate <= moment(endDate)) {
+      if (daysOfWeek.includes(currentDate.day())) {
+        dates.push(moment(currentDate).toDate());
+      }
+      daysCounter += 1;
+      if (daysCounter === 7 && interval > 1) {
+        currentDate = moment(currentDate).add(interval - 1, 'weeks');
+        daysCounter = 0;
+      } else {
+        currentDate = moment(currentDate).add(1, 'days');
+      }
+    }
+
+    return dates;
+  }
+
+  handleRecurringEvents(recurringEventInfo, openedEventTitle) {
+    const interval = recurringEventInfo.interval;
+    const daysOfWeek = recurringEventInfo.daysOfWeek;
+    const startDate = recurringEventInfo.startDate;
+    const endDate = recurringEventInfo.endDate;
+
+    const recurDates = this.getDates(interval, daysOfWeek, startDate, endDate);
+
+    recurDates.forEach(date => {
+      // apply same individual event process for each within the range
+      const momentStart = moment(date);
+      const momentEnd = moment(date)
+        .add(24, 'hours')
+        .add(-1, 'seconds');
+      const recurringEvent = {
+        title: openedEventTitle,
+        start: momentStart.toDate(),
+        end: momentEnd.toDate(),
+      };
+
+      axios
+        .post('/api/events', recurringEvent)
+        .then(({ data }) => {
+          const { events } = this.state;
+          events.push(this.transformToFullcalendarEvent(data));
+          this.setState({ events });
+          this.setState({ recurringEventInfo: {} });
+        })
+        .catch(error => {
+          alert(
+            'Something went wrong with recurring dates! Check the console.'
+          );
+          console.log(error);
+        });
+    });
+  }
+
   componentDidMount() {
     this.fetchAndLoadEvents();
   }
   render() {
-    const { events, modalOpen, openedEventTitle, newEvent } = this.state;
+    const {
+      events,
+      modalOpen,
+      openedEventTitle,
+      newEvent,
+      isRecurring,
+    } = this.state;
     return (
       <div>
         <FullCalendar
@@ -212,8 +354,14 @@ class App extends React.Component {
           <EventDetailsForm
             value={openedEventTitle}
             showDelete={!newEvent}
+            isRecurring={isRecurring}
             onChange={this.onTitleChange}
             onDelete={this.onDelete}
+            onCheckboxChange={this.onRecurCheckboxChange}
+            onRecurIntervalChange={this.onRecurIntervalChange}
+            onRecurDaysChange={this.onRecurDaysChange}
+            onRecurStartChange={this.onRecurStartChange}
+            onRecurEndChange={this.onRecurEndChange}
           />
         </Modal>
       </div>
