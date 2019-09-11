@@ -45,7 +45,7 @@ So I started from there and followed the method flow order to understand how dat
 
 1. A click on a new day invokes `onDayClick` which initializes some variables and sets state for `newEvent` and `modelOpen: true`, so the modal opens
 2. User inputs title, then click outside modal
-3. `onCloseModal` has if/else logic: if `newEvent` is true, then hit the POST endpoint to create the event; else do a PUT. On the callback call once it returns from either case, update the `events` array accordingly and `setState`
+3. `onCloseModal` has if/else logic: if `newEvent` is true, then hit the POST endpoint to create the event; else do a PUT. On the callback call once it returns from either case, update the [`events` array](https://fullcalendar.io/docs/events-array) accordingly and `setState`
 
 We're saying the bug occurs with new events only, so when doing the post. Look at the post handler in the sever:
 
@@ -142,9 +142,9 @@ We need to support recurring events just like Google Calendar does.Let's add a c
 - A date input called "End date" - this is when the recurring series should end
 ```
 
-I appreciated the suggestion in the README of getting started with a `getDates` method, it did help me start thinking about how to approach the feature and get things moving. I took a good amount of time here to dive into the https://fullcalendar.io/docs to understand the details regarding the events parsing.
+I appreciated the suggestion in the README of getting started with a `getDates` method, it did help me start thinking about how to approach the feature and get things moving. I took a good amount of time here to dive into the https://fullcalendar.io/docs to understand the details regarding the [events parsing](https://fullcalendar.io/docs/event-parsing).
 
-Naturally I came across the built-in recurring events feature and it seemed very promising initially. However after reviewing it carefully I understood that adding an interval to the recurring event (as requested per feature specification) was not supported directly. I did some brainstorming: if somehow we wanted to use the recurring feature that fullCalendar provides, it seems like we'd have to touch a few different parts of the codebase, edit API endpoints, etc. That's not entirely awful but made me wonder that was making things more complicated than it needed to be, plus the fact that intervals are not supported out of the box. I wanted a less intrusive approach —a more tofu approach— and decided to go off the fact that the `events` array is what's serving as a source of truth for the calendar, and therefore I could repeat the same process of individual event creation with each one of the dates that `getDates` returns, using a `forEach` to handle the asynchronous process inside a loop.
+Naturally I came across the built-in [recurring events](https://fullcalendar.io/docs/recurring-events) feature and it seemed very promising initially. However after reviewing it carefully I understood that adding an interval to the recurring event (as requested per feature specification) was not supported directly. I did some brainstorming: if somehow we wanted to use the recurring feature that fullCalendar provides, it seems like we'd have to touch a few different parts of the codebase, edit API endpoints, etc. That's not entirely awful but made me wonder that was making things more complicated than it needed to be, plus the fact that intervals are not supported out of the box. I wanted a less intrusive approach —a more [tofu approach](https://www.youtube.com/watch?v=n8l6FCD0Gqk)— and decided to go off the fact that the [`events` array](https://fullcalendar.io/docs/events-array) is what's serving as a source of truth for the calendar, and therefore I could repeat the same process of individual event creation with each one of the dates that `getDates` returns, using a `forEach` to [handle the asynchronous process inside a loop](https://stackoverflow.com/questions/11488014/asynchronous-process-inside-a-javascript-for-loop).
 
 I took the liberty of coding the UI inspired by Google Calendar's recurrent events.
 
